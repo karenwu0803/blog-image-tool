@@ -6,95 +6,171 @@
 <title>部落格圖片處理工具</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft JhengHei","Noto Sans TC",sans-serif;background:#f8fafc;color:#1e293b;min-height:100vh;padding:24px}
-.container{max-width:880px;margin:0 auto}
-h1{text-align:center;font-size:22px;font-weight:700;margin-bottom:24px;color:#0f172a}
-.card{background:#fff;border-radius:12px;padding:24px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);border:1px solid #e2e8f0}
-.card-title{font-size:15px;font-weight:600;margin-bottom:16px;color:#334155;display:flex;align-items:center;gap:8px}
-.card-title .badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:10px;background:#E6F7F4;color:#1A8A7A}
+body{
+  font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans TC","Microsoft JhengHei",sans-serif;
+  background:#f5f6f8;color:#404040;min-height:100vh;padding:0;
+}
 
-/* Upload */
-.upload-zone{border:2px dashed #cbd5e1;border-radius:12px;padding:44px 24px;text-align:center;cursor:pointer;transition:all .2s;background:#f8fafc}
-.upload-zone:hover,.upload-zone.dragover{border-color:#50C8B4;background:#E6F7F4}
-.upload-zone .icon{font-size:40px;margin-bottom:8px;color:#94a3b8;line-height:1}
-.upload-zone p{color:#64748b;font-size:15px;margin-bottom:6px}
-.upload-zone .hint{font-size:13px;color:#94a3b8}
+/* ── Header Bar ── */
+.top-bar{
+  background:linear-gradient(135deg,#5ec4a8 0%,#17BFAB 50%,#4dbba5 100%);
+  padding:14px 24px;display:flex;align-items:center;justify-content:center;gap:10px;
+}
+.top-bar h1{font-size:18px;font-weight:700;color:#fff;letter-spacing:.5px}
+.top-bar .sub{font-size:13px;color:rgba(255,255,255,.8);font-weight:400}
+
+/* ── Layout ── */
+.container{max-width:860px;margin:0 auto;padding:28px 20px 40px}
+
+/* ── Card ── */
+.card{
+  background:#fff;border-radius:16px;padding:28px;margin-bottom:20px;
+  border:1px solid #ececec;transition:box-shadow .2s;
+}
+.card:hover{box-shadow:0 4px 16px rgba(0,0,0,.05)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.card-title{font-size:16px;font-weight:700;color:#404040;display:flex;align-items:center;gap:8px}
+.badge{
+  font-size:11px;font-weight:600;padding:3px 10px;border-radius:8px;
+  background:#E9F9F0;color:#17BFAB;
+}
+.badge-done{background:#E9F9F0;color:#15803d}
+
+/* ── Upload Zone ── */
+.upload-zone{
+  border:2px dashed #d4d4d4;border-radius:16px;padding:52px 24px;
+  text-align:center;cursor:pointer;transition:all .25s;background:#fafafa;
+}
+.upload-zone:hover,.upload-zone.dragover{border-color:#17BFAB;background:#E9F9F0}
+.upload-icon{width:56px;height:56px;margin:0 auto 14px;background:#E9F9F0;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.upload-icon svg{width:26px;height:26px;stroke:#17BFAB;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.upload-zone p{color:#404040;font-size:15px;font-weight:500;margin-bottom:6px}
+.upload-zone .hint{font-size:13px;color:#999;font-weight:400}
 .upload-zone input{display:none}
 
-/* Info bar */
-.info-bar{display:flex;gap:20px;flex-wrap:wrap;font-size:13px;color:#64748b;padding:10px 14px;background:#f1f5f9;border-radius:8px;margin-bottom:14px}
-.info-bar .item{display:flex;align-items:center;gap:5px}
-.info-bar .label{color:#94a3b8;font-weight:500}
-
-/* Notice */
-.notice{font-size:13px;padding:10px 14px;border-radius:8px;margin-bottom:14px}
-.notice-blue{background:#E6F7F4;color:#1A8A7A}
-.notice-amber{background:#fffbeb;color:#b45309}
-
-/* Options grid */
-.options-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px}
-.opt-group{flex:1;min-width:200px;display:flex;flex-direction:column;gap:5px}
-.opt-group label{font-size:13px;font-weight:500;color:#475569}
-.opt-group input[type=text],.opt-group select{padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;transition:border-color .2s;background:#fff;color:#1e293b}
-.opt-group input[type=text]:focus,.opt-group select:focus{border-color:#50C8B4;box-shadow:0 0 0 3px rgba(80,200,180,.15)}
-
-/* Checkbox */
-.chk-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.chk-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#50C8B4}
-.chk-row label{font-size:14px;cursor:pointer;color:#475569}
-
-/* Slider */
-.slider-group{margin-bottom:14px}
-.slider-group .slider-label{font-size:13px;font-weight:500;color:#475569;margin-bottom:6px;display:flex;justify-content:space-between}
-.slider-group input[type=range]{width:100%;cursor:pointer;accent-color:#50C8B4}
-
-/* Logo setup */
-.logo-row{display:flex;align-items:center;gap:16px;padding:12px 14px;background:#f1f5f9;border-radius:8px}
-.logo-row img{width:72px;height:auto;object-fit:contain;border-radius:4px;border:1px solid #e2e8f0;background:#fff;padding:4px}
-.logo-row .placeholder{width:72px;height:40px;display:flex;align-items:center;justify-content:center;border:1px dashed #cbd5e1;border-radius:4px;font-size:12px;color:#94a3b8;background:#fff}
-.logo-row .logo-info{flex:1;display:flex;flex-direction:column;gap:4px}
-.logo-row .logo-status{font-size:12px;color:#94a3b8}
+/* ── Logo Row ── */
+.logo-row{
+  display:flex;align-items:center;gap:18px;padding:16px 18px;
+  background:#fafafa;border-radius:12px;border:1px solid #ececec;
+}
+.logo-row img{width:76px;height:auto;object-fit:contain;border-radius:8px;border:1px solid #ececec;background:#fff;padding:6px}
+.logo-row .placeholder{
+  width:76px;height:44px;display:flex;align-items:center;justify-content:center;
+  border:2px dashed #d4d4d4;border-radius:8px;font-size:12px;color:#bbb;background:#fff;
+}
+.logo-row .logo-info{flex:1;display:flex;flex-direction:column;gap:6px}
+.logo-row .logo-status{font-size:12px;color:#999}
 .logo-row input{display:none}
 
-/* Preview */
+/* ── Info Bar ── */
+.info-bar{
+  display:flex;gap:24px;flex-wrap:wrap;font-size:13px;color:#636363;
+  padding:12px 16px;background:#fafafa;border-radius:10px;margin-bottom:16px;
+  border:1px solid #ececec;
+}
+.info-bar .item{display:flex;align-items:center;gap:6px}
+.info-bar .label{color:#999;font-weight:500;font-size:12px}
+
+/* ── Notice ── */
+.notice{font-size:13px;padding:11px 16px;border-radius:10px;margin-bottom:16px;font-weight:500}
+.notice-teal{background:#E9F9F0;color:#0e9a87}
+.notice-amber{background:#fff8e6;color:#b45309;border:1px solid #fde68a}
+
+/* ── Options ── */
+.options-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.opt-group{flex:1;min-width:200px;display:flex;flex-direction:column;gap:6px}
+.opt-group label{font-size:13px;font-weight:600;color:#404040}
+.opt-group input[type=text],.opt-group select{
+  padding:10px 14px;border:1px solid #d4d4d4;border-radius:10px;font-size:14px;
+  outline:none;transition:all .2s;background:#fff;color:#404040;
+}
+.opt-group input[type=text]:focus,.opt-group select:focus{
+  border-color:#17BFAB;box-shadow:0 0 0 3px rgba(23,191,171,.12);
+}
+
+/* ── Checkbox ── */
+.chk-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.chk-row input[type=checkbox]{
+  width:18px;height:18px;cursor:pointer;accent-color:#17BFAB;border-radius:4px;
+}
+.chk-row label{font-size:14px;cursor:pointer;color:#404040;font-weight:500}
+
+/* ── Draggable Canvas ── */
+.preview-wrap.can-drag{cursor:grab}
+.preview-wrap.can-drag:active{cursor:grabbing}
+.crop-hint{text-align:center;font-size:12px;color:#17BFAB;margin:8px 0 0;font-weight:500}
+
+/* ── Preview ── */
 .preview-wrap{text-align:center;position:relative}
-.preview-wrap canvas{max-width:100%;border-radius:8px;border:1px solid #e2e8f0;display:block;margin:0 auto}
-.preview-info{display:flex;justify-content:center;gap:20px;margin-top:10px;font-size:13px;color:#64748b}
-.preview-info .saved{color:#16a34a;font-weight:600}
+.preview-wrap canvas{
+  max-width:100%;border-radius:12px;border:1px solid #ececec;
+  display:block;margin:0 auto;
+}
+.preview-info{
+  display:flex;justify-content:center;gap:24px;margin-top:14px;
+  font-size:13px;color:#636363;font-weight:500;
+}
+.preview-info .saved{color:#17BFAB;font-weight:700}
+.preview-info .warn{color:#b45309;font-weight:700}
 
-/* Buttons */
-.btn{padding:9px 20px;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
-.btn-primary{background:#50C8B4;color:#fff}
-.btn-primary:hover{background:#3BB8A4}
-.btn-primary:disabled{background:#A8E4DA;cursor:not-allowed}
-.btn-outline{background:#fff;color:#475569;border:1px solid #e2e8f0}
-.btn-outline:hover{background:#f1f5f9}
-.btn-sm{padding:6px 14px;font-size:13px}
-.btn-danger-text{background:none;border:none;color:#dc2626;font-size:12px;cursor:pointer;padding:2px 6px}
+/* ── Buttons ── */
+.btn{
+  padding:10px 24px;border:none;border-radius:10px;font-size:14px;font-weight:600;
+  cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px;
+}
+.btn-download{
+  background:#F9D122;color:#404040;font-size:15px;padding:12px 32px;
+  box-shadow:0 2px 8px rgba(249,209,34,.3);
+}
+.btn-download:hover{background:#f0c800;box-shadow:0 4px 12px rgba(249,209,34,.4)}
+.btn-teal{background:#17BFAB;color:#fff}
+.btn-teal:hover{background:#0ea998}
+.btn-outline{background:#fff;color:#636363;border:1px solid #d4d4d4}
+.btn-outline:hover{background:#fafafa;border-color:#bbb}
+.btn-sm{padding:7px 16px;font-size:13px}
+.btn-danger-text{background:none;border:none;color:#e74c3c;font-size:12px;cursor:pointer;padding:2px 8px;font-weight:500}
 .btn-danger-text:hover{text-decoration:underline}
-.actions{display:flex;gap:10px;justify-content:center;margin-top:16px}
+.actions{display:flex;gap:12px;justify-content:center;margin-top:20px;flex-wrap:wrap}
 
-/* Loading */
-.processing-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.85);border-radius:8px;font-size:14px;color:#50C8B4;font-weight:500;z-index:5}
+/* ── Loading ── */
+.processing-overlay{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.88);border-radius:12px;font-size:15px;
+  color:#17BFAB;font-weight:600;z-index:5;
+}
 
-/* Hidden */
+/* ── Divider ── */
+.divider{height:1px;background:#ececec;margin:18px 0}
+
+/* ── Hidden ── */
 .hidden{display:none!important}
 
-/* Responsive */
+/* ── Responsive ── */
 @media(max-width:600px){
-  body{padding:12px}
+  .container{padding:16px 12px 32px}
+  .card{padding:20px 16px}
   .options-row{flex-direction:column}
   .opt-group{min-width:0}
+  .top-bar h1{font-size:16px}
 }
 </style>
 </head>
 <body>
+
+<!-- Header -->
+<div class="top-bar">
+  <h1>部落格圖片處理工具</h1>
+  <span class="sub">Blog Image Tool</span>
+</div>
+
 <div class="container">
-  <h1>Blog Image Tool - 部落格圖片處理工具</h1>
 
   <!-- LOGO Setup -->
   <div class="card" id="logoCard">
-    <div class="card-title">LOGO 設定 <span class="badge" id="logoBadge">未設定</span></div>
+    <div class="card-header">
+      <div class="card-title">LOGO 設定</div>
+      <span class="badge" id="logoBadge">未設定</span>
+    </div>
     <div class="logo-row">
       <div id="logoThumb"><div class="placeholder">LOGO</div></div>
       <div class="logo-info">
@@ -110,9 +186,13 @@ h1{text-align:center;font-size:22px;font-weight:700;margin-bottom:24px;color:#0f
 
   <!-- Upload -->
   <div class="card" id="uploadCard">
-    <div class="card-title">上傳圖片</div>
+    <div class="card-header">
+      <div class="card-title">上傳圖片</div>
+    </div>
     <div class="upload-zone" id="uploadZone">
-      <div class="icon">&#x1F5BC;</div>
+      <div class="upload-icon">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
       <p>拖曳圖片到此處，或點擊選擇檔案</p>
       <p class="hint">支援 PNG / JPEG / WebP，也可以 Ctrl+V 貼上</p>
       <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp">
@@ -121,7 +201,9 @@ h1{text-align:center;font-size:22px;font-weight:700;margin-bottom:24px;color:#0f
 
   <!-- Options -->
   <div class="card hidden" id="optionsCard">
-    <div class="card-title">處理選項</div>
+    <div class="card-header">
+      <div class="card-title">處理選項</div>
+    </div>
 
     <div class="info-bar" id="origInfo">
       <div class="item"><span class="label">尺寸</span><span id="origDim"></span></div>
@@ -129,15 +211,9 @@ h1{text-align:center;font-size:22px;font-weight:700;margin-bottom:24px;color:#0f
       <div class="item"><span class="label">格式</span><span id="origFmt"></span></div>
     </div>
 
-    <div id="resizeNotice" class="notice notice-blue"></div>
+    <div id="resizeNotice" class="notice notice-teal"></div>
 
-    <div class="slider-group hidden" id="cropSliderWrap">
-      <div class="slider-label">
-        <span id="cropLabel">位置調整</span>
-        <span id="cropValue">50%</span>
-      </div>
-      <input type="range" id="cropSlider" min="0" max="100" value="50" oninput="onCropSlide(this.value)">
-    </div>
+    <div class="divider"></div>
 
     <div class="chk-row">
       <input type="checkbox" id="chkSharpen" checked onchange="onOptChange()">
@@ -148,6 +224,8 @@ h1{text-align:center;font-size:22px;font-weight:700;margin-bottom:24px;color:#0f
       <input type="checkbox" id="chkLogo" onchange="onOptChange()">
       <label for="chkLogo">加入公司 LOGO（置中）</label>
     </div>
+
+    <div class="divider"></div>
 
     <div class="options-row">
       <div class="opt-group">
@@ -170,35 +248,39 @@ h1{text-align:center;font-size:22px;font-weight:700;margin-bottom:24px;color:#0f
 
   <!-- Preview -->
   <div class="card hidden" id="previewCard">
-    <div class="card-title">預覽結果</div>
+    <div class="card-header">
+      <div class="card-title">預覽結果</div>
+    </div>
     <div class="preview-wrap" id="previewWrap">
       <canvas id="cvs"></canvas>
       <div class="processing-overlay hidden" id="loadingOverlay">處理中...</div>
     </div>
+    <p class="crop-hint hidden" id="cropHint"></p>
     <div class="preview-info" id="previewInfo">
       <span>尺寸：<span id="pvDim"></span></span>
       <span>大小：<span id="pvSize"></span></span>
-      <span class="saved" id="pvSaved"></span>
+      <span id="pvSaved"></span>
     </div>
     <div class="actions">
-      <button class="btn btn-primary" id="dlBtn" onclick="download()">下載圖片</button>
+      <button class="btn btn-download" id="dlBtn" onclick="download()">下載圖片</button>
       <button class="btn btn-outline" onclick="reset()">處理另一張</button>
     </div>
   </div>
+
 </div>
 
 <script>
 /* ───── State ───── */
-let srcImg = null;   // original Image element
-let srcFile = null;  // original File
-let logoImg = null;  // logo Image element
-let cropOff = 0.5;   // 0‒1, center default
-let outBlob = null;  // processed blob
+let srcImg = null;
+let srcFile = null;
+let logoImg = null;
+let cropOff = 0.5;
+let outBlob = null;
 let busy = false;
 let debounce = null;
 
 const TARGET_W = 800, TARGET_H = 450;
-const MAX_BYTES = 150 * 1024; // 150 KB
+const MAX_BYTES = 150 * 1024;
 
 /* ───── Init ───── */
 document.addEventListener('DOMContentLoaded', () => {
@@ -244,13 +326,13 @@ function refreshLogoUI() {
   if (logoImg) {
     thumb.innerHTML = '<img src="' + logoImg.src + '" alt="LOGO">';
     badge.textContent = '已設定';
-    badge.style.background = '#dcfce7'; badge.style.color = '#15803d';
+    badge.className = 'badge badge-done';
     rmBtn.classList.remove('hidden');
     status.textContent = '已儲存於瀏覽器，下次開啟自動載入';
   } else {
     thumb.innerHTML = '<div class="placeholder">LOGO</div>';
     badge.textContent = '未設定';
-    badge.style.background = '#E6F7F4'; badge.style.color = '#1A8A7A';
+    badge.className = 'badge';
     rmBtn.classList.add('hidden');
     status.textContent = '上傳 PNG 透明背景圖檔，僅需設定一次';
   }
@@ -301,56 +383,97 @@ function loadFile(file) {
 function showOptions() {
   const w = srcImg.naturalWidth, h = srcImg.naturalHeight;
 
-  // info
   document.getElementById('origDim').textContent = w + ' x ' + h + ' px';
   document.getElementById('origSize').textContent = fmtSize(srcFile.size);
   document.getElementById('origFmt').textContent = srcFile.type.split('/')[1].toUpperCase();
 
-  // filename
   const raw = srcFile.name ? srcFile.name.replace(/\.[^.]+$/, '') : 'image_' + Date.now();
   document.getElementById('txtName').value = raw;
 
-  // resize notice
   const notice = document.getElementById('resizeNotice');
-  const sliderWrap = document.getElementById('cropSliderWrap');
 
   if (w >= TARGET_W) {
-    notice.textContent = '原圖 ' + w + 'x' + h + ' → 等比縮放填滿 ' + TARGET_W + 'x' + TARGET_H;
+    notice.textContent = '原圖 ' + w + ' x ' + h + ' → 等比縮放填滿 ' + TARGET_W + ' x ' + TARGET_H;
     const targetR = TARGET_W / TARGET_H;
     const imgR = w / h;
     if (Math.abs(imgR - targetR) < 0.02) {
-      sliderWrap.classList.add('hidden');
+      needsCrop = false;
     } else {
-      sliderWrap.classList.remove('hidden');
-      document.getElementById('cropSlider').value = 50;
+      needsCrop = true;
       cropOff = 0.5;
-      document.getElementById('cropLabel').textContent =
-        imgR > targetR ? '水平位置（左 ← → 右）' : '垂直位置（上 ← → 下）';
-      document.getElementById('cropValue').textContent = '50%';
+      cropDir = imgR > targetR ? 'x' : 'y';
+      document.getElementById('cropHint').textContent =
+        cropDir === 'x' ? '← 拖曳預覽圖片調整水平位置 →' : '↑ 拖曳預覽圖片調整垂直位置 ↓';
     }
   } else {
     notice.textContent = '原圖寬度 ' + w + 'px < ' + TARGET_W + 'px，僅壓縮不縮放';
-    sliderWrap.classList.add('hidden');
+    needsCrop = false;
   }
 
   document.getElementById('optionsCard').classList.remove('hidden');
 }
 
-/* ───── Events ───── */
-function onCropSlide(v) {
-  cropOff = v / 100;
-  document.getElementById('cropValue').textContent = v + '%';
+/* ───── Canvas Drag (crop) ───── */
+let isDragging = false;
+let dragStart = 0;
+let dragStartOff = 0;
+let needsCrop = false;
+let cropDir = null;
+
+function setupCanvasDrag() {
+  const wrap = document.getElementById('previewWrap');
+  wrap.onmousedown = canvasDragStart;
+  wrap.ontouchstart = canvasDragStart;
+}
+
+function canvasDragStart(e) {
+  if (!needsCrop) return;
+  e.preventDefault();
+  isDragging = true;
+  const p = ptrPos(e);
+  dragStart = cropDir === 'y' ? p.y : p.x;
+  dragStartOff = cropOff;
+  document.addEventListener('mousemove', canvasDragMove);
+  document.addEventListener('mouseup', canvasDragEnd);
+  document.addEventListener('touchmove', canvasDragMove, {passive:false});
+  document.addEventListener('touchend', canvasDragEnd);
+}
+
+function canvasDragMove(e) {
+  if (!isDragging) return;
+  e.preventDefault();
+  const p = ptrPos(e);
+  const cur = cropDir === 'y' ? p.y : p.x;
+  const cvs = document.getElementById('cvs');
+  const visibleSize = cropDir === 'y' ? cvs.getBoundingClientRect().height : cvs.getBoundingClientRect().width;
+  const delta = dragStart - cur;
+  cropOff = Math.max(0, Math.min(1, dragStartOff + delta / visibleSize));
+  drawCanvas();
+  dragStart = cur;
+  dragStartOff = cropOff;
+}
+
+function canvasDragEnd() {
+  isDragging = false;
+  document.removeEventListener('mousemove', canvasDragMove);
+  document.removeEventListener('mouseup', canvasDragEnd);
+  document.removeEventListener('touchmove', canvasDragMove);
+  document.removeEventListener('touchend', canvasDragEnd);
   scheduleUpdate();
 }
 
+function ptrPos(e) {
+  if (e.touches && e.touches.length) return {x:e.touches[0].clientX, y:e.touches[0].clientY};
+  return {x:e.clientX, y:e.clientY};
+}
+
+/* ───── Events ───── */
 function onOptChange() {
-  // logo checkbox guard
   if (document.getElementById('chkLogo').checked && !logoImg) {
     alert('請先在上方「LOGO 設定」上傳 LOGO 圖檔');
     document.getElementById('chkLogo').checked = false;
     return;
   }
-  // PNG warning
   const fmt = document.getElementById('selFmt').value;
   document.getElementById('pngWarn').classList.toggle('hidden', fmt !== 'image/png');
   scheduleUpdate();
@@ -361,70 +484,63 @@ function scheduleUpdate() {
   debounce = setTimeout(render, 80);
 }
 
-/* ───── Core rendering ───── */
+/* ───── Drawing (fast, for drag) ───── */
+function drawCanvas() {
+  if (!srcImg) return;
+  const cvs = document.getElementById('cvs');
+  const ctx = cvs.getContext('2d');
+  const w = srcImg.naturalWidth, h = srcImg.naturalHeight;
+
+  if (w >= TARGET_W) {
+    cvs.width = TARGET_W;
+    cvs.height = TARGET_H;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    const tR = TARGET_W / TARGET_H;
+    const iR = w / h;
+    let sx, sy, sw, sh;
+    if (iR > tR) {
+      sh = h; sw = h * tR; sy = 0; sx = (w - sw) * cropOff;
+    } else {
+      sw = w; sh = w / tR; sx = 0; sy = (h - sh) * cropOff;
+    }
+    ctx.drawImage(srcImg, sx, sy, sw, sh, 0, 0, TARGET_W, TARGET_H);
+  } else {
+    cvs.width = w; cvs.height = h;
+    ctx.drawImage(srcImg, 0, 0);
+  }
+
+  if (document.getElementById('chkSharpen').checked && w >= TARGET_W) {
+    applySharpen(ctx, cvs.width, cvs.height, 0.4);
+  }
+
+  if (document.getElementById('chkLogo').checked && logoImg) {
+    const lw = logoImg.naturalWidth, lh = logoImg.naturalHeight;
+    const sc = Math.min(cvs.width / lw, cvs.height / lh);
+    const dw = lw * sc, dh = lh * sc;
+    ctx.drawImage(logoImg, (cvs.width - dw) / 2, (cvs.height - dh) / 2, dw, dh);
+  }
+}
+
+/* ───── Full render (draw + compress) ───── */
 async function render() {
   if (!srcImg || busy) return;
   busy = true;
 
-  const overlay = document.getElementById('loadingOverlay');
   const previewCard = document.getElementById('previewCard');
+  const wrap = document.getElementById('previewWrap');
   previewCard.classList.remove('hidden');
-  overlay.classList.remove('hidden');
+  wrap.classList.toggle('can-drag', needsCrop);
+  document.getElementById('cropHint').classList.toggle('hidden', !needsCrop);
+
+  drawCanvas();
+  setupCanvasDrag();
 
   try {
     const cvs = document.getElementById('cvs');
-    const ctx = cvs.getContext('2d');
-    const w = srcImg.naturalWidth, h = srcImg.naturalHeight;
-
-    /* 1) Draw base image */
-    if (w >= TARGET_W) {
-      cvs.width = TARGET_W;
-      cvs.height = TARGET_H;
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-
-      const tR = TARGET_W / TARGET_H;
-      const iR = w / h;
-
-      let sx, sy, sw, sh;
-      if (iR > tR) {
-        // wider → crop width
-        sh = h; sw = h * tR;
-        sy = 0; sx = (w - sw) * cropOff;
-      } else {
-        // taller → crop height
-        sw = w; sh = w / tR;
-        sx = 0; sy = (h - sh) * cropOff;
-      }
-      ctx.drawImage(srcImg, sx, sy, sw, sh, 0, 0, TARGET_W, TARGET_H);
-    } else {
-      cvs.width = w;
-      cvs.height = h;
-      ctx.drawImage(srcImg, 0, 0);
-    }
-
-    /* 2) Sharpen after resize */
-    if (document.getElementById('chkSharpen').checked && w >= TARGET_W) {
-      applySharpen(ctx, cvs.width, cvs.height, 0.4);
-    }
-
-    /* 3) Logo overlay */
-    if (document.getElementById('chkLogo').checked && logoImg) {
-      const lw = logoImg.naturalWidth, lh = logoImg.naturalHeight;
-      const scaleX = cvs.width / lw;
-      const scaleY = cvs.height / lh;
-      const sc = Math.min(scaleX, scaleY);
-      const dw = lw * sc, dh = lh * sc;
-      const dx = (cvs.width - dw) / 2;
-      const dy = (cvs.height - dh) / 2;
-      ctx.drawImage(logoImg, dx, dy, dw, dh);
-    }
-
-    /* 4) Compress */
     const fmt = getFormat();
     outBlob = await compress(cvs, fmt);
 
-    /* 5) Update preview info */
     document.getElementById('pvDim').textContent = cvs.width + ' x ' + cvs.height + ' px';
     document.getElementById('pvSize').textContent = fmtSize(outBlob.size);
 
@@ -432,14 +548,12 @@ async function render() {
     const savedEl = document.getElementById('pvSaved');
     if (pct > 0) {
       savedEl.textContent = '節省 ' + pct.toFixed(0) + '%';
-      savedEl.style.color = '#16a34a';
+      savedEl.className = 'saved';
     } else {
       savedEl.textContent = '大小增加 ' + Math.abs(pct).toFixed(0) + '%';
-      savedEl.style.color = '#b45309';
+      savedEl.className = 'warn';
     }
-
   } finally {
-    overlay.classList.add('hidden');
     busy = false;
   }
 }
@@ -488,14 +602,11 @@ function getExt(fmt) {
 }
 
 async function compress(cvs, fmt) {
-  // PNG: no quality control
   if (fmt === 'image/png') return toBlobP(cvs, 'image/png');
 
-  // Try high quality first
   let blob = await toBlobP(cvs, fmt, 0.92);
   if (blob.size <= MAX_BYTES) return blob;
 
-  // Binary search
   let lo = 0.2, hi = 0.92, best = blob;
   for (let i = 0; i < 9; i++) {
     const mid = (lo + hi) / 2;
@@ -532,8 +643,10 @@ function reset() {
   srcImg = null; srcFile = null; outBlob = null; cropOff = 0.5;
   document.getElementById('optionsCard').classList.add('hidden');
   document.getElementById('previewCard').classList.add('hidden');
+  needsCrop = false;
   document.getElementById('fileInput').value = '';
-  document.getElementById('cropSlider').value = 50;
+  document.getElementById('cropHint').classList.add('hidden');
+  document.getElementById('previewWrap').classList.remove('can-drag');
   document.getElementById('chkSharpen').checked = true;
   document.getElementById('chkLogo').checked = false;
   document.getElementById('selFmt').value = 'original';
