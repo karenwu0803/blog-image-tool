@@ -11,11 +11,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft JhengHei
 h1{text-align:center;font-size:22px;font-weight:700;margin-bottom:24px;color:#0f172a}
 .card{background:#fff;border-radius:12px;padding:24px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);border:1px solid #e2e8f0}
 .card-title{font-size:15px;font-weight:600;margin-bottom:16px;color:#334155;display:flex;align-items:center;gap:8px}
-.card-title .badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:10px;background:#e0f2fe;color:#0369a1}
+.card-title .badge{font-size:11px;font-weight:500;padding:2px 8px;border-radius:10px;background:#E6F7F4;color:#1A8A7A}
 
 /* Upload */
 .upload-zone{border:2px dashed #cbd5e1;border-radius:12px;padding:44px 24px;text-align:center;cursor:pointer;transition:all .2s;background:#f8fafc}
-.upload-zone:hover,.upload-zone.dragover{border-color:#3b82f6;background:#eff6ff}
+.upload-zone:hover,.upload-zone.dragover{border-color:#50C8B4;background:#E6F7F4}
 .upload-zone .icon{font-size:40px;margin-bottom:8px;color:#94a3b8;line-height:1}
 .upload-zone p{color:#64748b;font-size:15px;margin-bottom:6px}
 .upload-zone .hint{font-size:13px;color:#94a3b8}
@@ -28,7 +28,7 @@ h1{text-align:center;font-size:22px;font-weight:700;margin-bottom:24px;color:#0f
 
 /* Notice */
 .notice{font-size:13px;padding:10px 14px;border-radius:8px;margin-bottom:14px}
-.notice-blue{background:#eff6ff;color:#1d4ed8}
+.notice-blue{background:#E6F7F4;color:#1A8A7A}
 .notice-amber{background:#fffbeb;color:#b45309}
 
 /* Options grid */
@@ -36,17 +36,17 @@ h1{text-align:center;font-size:22px;font-weight:700;margin-bottom:24px;color:#0f
 .opt-group{flex:1;min-width:200px;display:flex;flex-direction:column;gap:5px}
 .opt-group label{font-size:13px;font-weight:500;color:#475569}
 .opt-group input[type=text],.opt-group select{padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;transition:border-color .2s;background:#fff;color:#1e293b}
-.opt-group input[type=text]:focus,.opt-group select:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.opt-group input[type=text]:focus,.opt-group select:focus{border-color:#50C8B4;box-shadow:0 0 0 3px rgba(80,200,180,.15)}
 
 /* Checkbox */
 .chk-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.chk-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#3b82f6}
+.chk-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#50C8B4}
 .chk-row label{font-size:14px;cursor:pointer;color:#475569}
 
 /* Slider */
 .slider-group{margin-bottom:14px}
 .slider-group .slider-label{font-size:13px;font-weight:500;color:#475569;margin-bottom:6px;display:flex;justify-content:space-between}
-.slider-group input[type=range]{width:100%;cursor:pointer;accent-color:#3b82f6}
+.slider-group input[type=range]{width:100%;cursor:pointer;accent-color:#50C8B4}
 
 /* Logo setup */
 .logo-row{display:flex;align-items:center;gap:16px;padding:12px 14px;background:#f1f5f9;border-radius:8px}
@@ -64,9 +64,9 @@ h1{text-align:center;font-size:22px;font-weight:700;margin-bottom:24px;color:#0f
 
 /* Buttons */
 .btn{padding:9px 20px;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
-.btn-primary{background:#3b82f6;color:#fff}
-.btn-primary:hover{background:#2563eb}
-.btn-primary:disabled{background:#93c5fd;cursor:not-allowed}
+.btn-primary{background:#50C8B4;color:#fff}
+.btn-primary:hover{background:#3BB8A4}
+.btn-primary:disabled{background:#A8E4DA;cursor:not-allowed}
 .btn-outline{background:#fff;color:#475569;border:1px solid #e2e8f0}
 .btn-outline:hover{background:#f1f5f9}
 .btn-sm{padding:6px 14px;font-size:13px}
@@ -75,7 +75,7 @@ h1{text-align:center;font-size:22px;font-weight:700;margin-bottom:24px;color:#0f
 .actions{display:flex;gap:10px;justify-content:center;margin-top:16px}
 
 /* Loading */
-.processing-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.85);border-radius:8px;font-size:14px;color:#3b82f6;font-weight:500;z-index:5}
+.processing-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.85);border-radius:8px;font-size:14px;color:#50C8B4;font-weight:500;z-index:5}
 
 /* Hidden */
 .hidden{display:none!important}
@@ -137,6 +137,11 @@ h1{text-align:center;font-size:22px;font-weight:700;margin-bottom:24px;color:#0f
         <span id="cropValue">50%</span>
       </div>
       <input type="range" id="cropSlider" min="0" max="100" value="50" oninput="onCropSlide(this.value)">
+    </div>
+
+    <div class="chk-row">
+      <input type="checkbox" id="chkSharpen" checked onchange="onOptChange()">
+      <label for="chkSharpen">縮圖銳化（讓縮放後的圖片更清晰）</label>
     </div>
 
     <div class="chk-row">
@@ -245,7 +250,7 @@ function refreshLogoUI() {
   } else {
     thumb.innerHTML = '<div class="placeholder">LOGO</div>';
     badge.textContent = '未設定';
-    badge.style.background = '#e0f2fe'; badge.style.color = '#0369a1';
+    badge.style.background = '#E6F7F4'; badge.style.color = '#1A8A7A';
     rmBtn.classList.add('hidden');
     status.textContent = '上傳 PNG 透明背景圖檔，僅需設定一次';
   }
@@ -398,7 +403,12 @@ async function render() {
       ctx.drawImage(srcImg, 0, 0);
     }
 
-    /* 2) Logo overlay */
+    /* 2) Sharpen after resize */
+    if (document.getElementById('chkSharpen').checked && w >= TARGET_W) {
+      applySharpen(ctx, cvs.width, cvs.height, 0.4);
+    }
+
+    /* 3) Logo overlay */
     if (document.getElementById('chkLogo').checked && logoImg) {
       const lw = logoImg.naturalWidth, lh = logoImg.naturalHeight;
       const scaleX = cvs.width / lw;
@@ -410,11 +420,11 @@ async function render() {
       ctx.drawImage(logoImg, dx, dy, dw, dh);
     }
 
-    /* 3) Compress */
+    /* 4) Compress */
     const fmt = getFormat();
     outBlob = await compress(cvs, fmt);
 
-    /* 4) Update preview info */
+    /* 5) Update preview info */
     document.getElementById('pvDim').textContent = cvs.width + ' x ' + cvs.height + ' px';
     document.getElementById('pvSize').textContent = fmtSize(outBlob.size);
 
@@ -432,6 +442,39 @@ async function render() {
     overlay.classList.add('hidden');
     busy = false;
   }
+}
+
+/* ───── Sharpen ───── */
+function applySharpen(ctx, w, h, strength) {
+  const src = ctx.getImageData(0, 0, w, h);
+  const dst = ctx.createImageData(w, h);
+  const s = src.data, d = dst.data;
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+
+      if (y === 0 || y === h - 1 || x === 0 || x === w - 1) {
+        d[i] = s[i]; d[i+1] = s[i+1]; d[i+2] = s[i+2]; d[i+3] = s[i+3];
+        continue;
+      }
+
+      for (let c = 0; c < 3; c++) {
+        const center = s[i + c];
+        const neighbors =
+          s[((y-1)*w+x)*4+c] +
+          s[((y+1)*w+x)*4+c] +
+          s[(y*w+x-1)*4+c] +
+          s[(y*w+x+1)*4+c];
+        const diff = center - neighbors / 4;
+        const val = center + strength * diff;
+        d[i + c] = val < 0 ? 0 : val > 255 ? 255 : (val + 0.5) | 0;
+      }
+      d[i+3] = s[i+3];
+    }
+  }
+
+  ctx.putImageData(dst, 0, 0);
 }
 
 /* ───── Compression ───── */
@@ -491,6 +534,7 @@ function reset() {
   document.getElementById('previewCard').classList.add('hidden');
   document.getElementById('fileInput').value = '';
   document.getElementById('cropSlider').value = 50;
+  document.getElementById('chkSharpen').checked = true;
   document.getElementById('chkLogo').checked = false;
   document.getElementById('selFmt').value = 'original';
   document.getElementById('pngWarn').classList.add('hidden');
