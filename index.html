@@ -132,13 +132,6 @@ body{
 .btn-danger-text:hover{text-decoration:underline}
 .actions{display:flex;gap:12px;justify-content:center;margin-top:20px;flex-wrap:wrap}
 
-/* ── Loading ── */
-.processing-overlay{
-  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  background:rgba(255,255,255,.88);border-radius:12px;font-size:15px;
-  color:#17BFAB;font-weight:600;z-index:5;
-}
-
 /* ── Divider ── */
 .divider{height:1px;background:#ececec;margin:18px 0}
 
@@ -175,12 +168,12 @@ body{
       <div id="logoThumb"><div class="placeholder">LOGO</div></div>
       <div class="logo-info">
         <div>
-          <button class="btn btn-outline btn-sm" onclick="document.getElementById('logoInput').click()">上傳 LOGO</button>
-          <button class="btn-danger-text hidden" id="logoRemoveBtn" onclick="removeLogo()">移除</button>
+          <button class="btn btn-outline btn-sm" id="logoUploadBtn">上傳 LOGO</button>
+          <button class="btn-danger-text hidden" id="logoRemoveBtn">移除</button>
         </div>
         <span class="logo-status" id="logoStatus">上傳 PNG 透明背景圖檔，僅需設定一次</span>
       </div>
-      <input type="file" id="logoInput" accept="image/png,image/webp,image/gif" onchange="handleLogoUpload(this.files[0])">
+      <input type="file" id="logoInput" accept="image/png,image/webp,image/gif">
     </div>
   </div>
 
@@ -216,12 +209,12 @@ body{
     <div class="divider"></div>
 
     <div class="chk-row">
-      <input type="checkbox" id="chkSharpen" checked onchange="onOptChange()">
+      <input type="checkbox" id="chkSharpen" checked>
       <label for="chkSharpen">縮圖銳化（讓縮放後的圖片更清晰）</label>
     </div>
 
     <div class="chk-row">
-      <input type="checkbox" id="chkLogo" onchange="onOptChange()">
+      <input type="checkbox" id="chkLogo">
       <label for="chkLogo">加入公司 LOGO（置中）</label>
     </div>
 
@@ -234,7 +227,7 @@ body{
       </div>
       <div class="opt-group">
         <label for="selFmt">輸出格式</label>
-        <select id="selFmt" onchange="onOptChange()">
+        <select id="selFmt">
           <option value="original">保持原格式</option>
           <option value="image/webp">WebP</option>
           <option value="image/jpeg">JPEG</option>
@@ -253,7 +246,6 @@ body{
     </div>
     <div class="preview-wrap" id="previewWrap">
       <canvas id="cvs"></canvas>
-      <div class="processing-overlay hidden" id="loadingOverlay">處理中...</div>
     </div>
     <p class="crop-hint hidden" id="cropHint"></p>
     <div class="preview-info" id="previewInfo">
@@ -262,118 +254,198 @@ body{
       <span id="pvSaved"></span>
     </div>
     <div class="actions">
-      <button class="btn btn-download" id="dlBtn" onclick="download()">下載圖片</button>
-      <button class="btn btn-outline" onclick="reset()">處理另一張</button>
+      <button class="btn btn-download" id="dlBtn">下載圖片</button>
+      <button class="btn btn-outline" id="resetBtn">處理另一張</button>
     </div>
   </div>
 
 </div>
 
 <script>
-/* ───── State ───── */
-let srcImg = null;
-let srcFile = null;
-let logoImg = null;
-let cropOff = 0.5;
-let outBlob = null;
-let busy = false;
-let debounce = null;
+(function() {
+'use strict';
 
-const TARGET_W = 800, TARGET_H = 450;
-const MAX_BYTES = 150 * 1024;
+/* ───── Constants ───── */
+var TARGET_W = 800, TARGET_H = 450;
+var MAX_BYTES = 150 * 1024;
+var MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+var MAX_DIMENSION = 8192; // Canvas safe limit
+var SHARPEN_STRENGTH = 0.4;
+
+/* ───── State ───── */
+var state = {
+  srcImg: null,
+  srcFile: null,
+  logoImg: null,
+  cropOff: 0.5,
+  outBlob: null,
+  busy: false,
+  pendingRender: false,
+  needsCrop: false,
+  cropDir: null,
+  isDragging: false,
+  dragStart: 0,
+  dragStartOff: 0
+};
+
+var debounceTimer = null;
+
+/* ───── DOM Cache ───── */
+var dom = {};
+function cacheDom() {
+  var ids = [
+    'logoInput','logoUploadBtn','logoRemoveBtn','logoBadge','logoThumb','logoStatus',
+    'uploadZone','fileInput',
+    'optionsCard','origDim','origSize','origFmt','txtName','resizeNotice',
+    'chkSharpen','chkLogo','selFmt','pngWarn',
+    'previewCard','previewWrap','cvs','cropHint',
+    'pvDim','pvSize','pvSaved',
+    'dlBtn','resetBtn'
+  ];
+  ids.forEach(function(id) { dom[id] = document.getElementById(id); });
+  dom.ctx = dom.cvs.getContext('2d');
+}
 
 /* ───── Init ───── */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
+  cacheDom();
+  bindEvents();
   loadLogo();
-  initUpload();
-  initPaste();
 });
+
+function bindEvents() {
+  // Logo
+  dom.logoUploadBtn.addEventListener('click', function() { dom.logoInput.click(); });
+  dom.logoInput.addEventListener('change', function() { handleLogoUpload(this.files[0]); });
+  dom.logoRemoveBtn.addEventListener('click', removeLogo);
+
+  // Upload
+  dom.uploadZone.addEventListener('click', function() { dom.fileInput.click(); });
+  dom.uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('dragover'); });
+  dom.uploadZone.addEventListener('dragleave', function() { this.classList.remove('dragover'); });
+  dom.uploadZone.addEventListener('drop', function(e) {
+    e.preventDefault(); this.classList.remove('dragover');
+    var f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('image/')) loadFile(f);
+  });
+  dom.fileInput.addEventListener('change', function() { if (this.files[0]) loadFile(this.files[0]); });
+
+  // Paste
+  document.addEventListener('paste', function(e) {
+    var items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        e.preventDefault();
+        var f = items[i].getAsFile();
+        if (f) loadFile(f);
+        return;
+      }
+    }
+  });
+
+  // Options
+  dom.chkSharpen.addEventListener('change', onOptChange);
+  dom.chkLogo.addEventListener('change', onOptChange);
+  dom.selFmt.addEventListener('change', onOptChange);
+
+  // Canvas drag (bind once)
+  dom.previewWrap.addEventListener('mousedown', canvasDragStart);
+  dom.previewWrap.addEventListener('touchstart', canvasDragStart);
+
+  // Actions
+  dom.dlBtn.addEventListener('click', download);
+  dom.resetBtn.addEventListener('click', reset);
+}
 
 /* ───── Logo ───── */
 function loadLogo() {
-  const d = localStorage.getItem('_blog_logo');
+  var d;
+  try { d = localStorage.getItem('_blog_logo'); } catch(e) { return; }
   if (!d) return;
-  const img = new Image();
-  img.onload = () => { logoImg = img; refreshLogoUI(); };
+  var img = new Image();
+  img.onload = function() { state.logoImg = img; refreshLogoUI(); };
+  img.onerror = function() { try { localStorage.removeItem('_blog_logo'); } catch(e) {} };
   img.src = d;
 }
 
 function handleLogoUpload(file) {
   if (!file) return;
-  const r = new FileReader();
-  r.onload = e => {
-    localStorage.setItem('_blog_logo', e.target.result);
-    const img = new Image();
-    img.onload = () => { logoImg = img; refreshLogoUI(); if (srcImg) scheduleUpdate(); };
+  var r = new FileReader();
+  r.onerror = function() { alert('LOGO 讀取失敗，請重試'); };
+  r.onload = function(e) {
+    try {
+      localStorage.setItem('_blog_logo', e.target.result);
+    } catch(err) {
+      alert('LOGO 檔案太大，無法儲存至瀏覽器。請使用較小的 PNG 檔案。');
+      return;
+    }
+    var img = new Image();
+    img.onload = function() {
+      state.logoImg = img;
+      refreshLogoUI();
+      if (state.srcImg) scheduleUpdate();
+    };
+    img.onerror = function() { alert('LOGO 圖片格式無法讀取'); };
     img.src = e.target.result;
   };
   r.readAsDataURL(file);
 }
 
 function removeLogo() {
-  localStorage.removeItem('_blog_logo');
-  logoImg = null;
+  try { localStorage.removeItem('_blog_logo'); } catch(e) {}
+  state.logoImg = null;
   refreshLogoUI();
-  document.getElementById('chkLogo').checked = false;
-  if (srcImg) scheduleUpdate();
+  dom.chkLogo.checked = false;
+  if (state.srcImg) scheduleUpdate();
 }
 
 function refreshLogoUI() {
-  const thumb = document.getElementById('logoThumb');
-  const badge = document.getElementById('logoBadge');
-  const rmBtn = document.getElementById('logoRemoveBtn');
-  const status = document.getElementById('logoStatus');
-  if (logoImg) {
-    thumb.innerHTML = '<img src="' + logoImg.src + '" alt="LOGO">';
-    badge.textContent = '已設定';
-    badge.className = 'badge badge-done';
-    rmBtn.classList.remove('hidden');
-    status.textContent = '已儲存於瀏覽器，下次開啟自動載入';
+  var thumb = dom.logoThumb;
+  // Fix #1: 不用 innerHTML 拼接，改用 createElement
+  thumb.textContent = '';
+  if (state.logoImg) {
+    var img = document.createElement('img');
+    img.src = state.logoImg.src;
+    img.alt = 'LOGO';
+    thumb.appendChild(img);
+    dom.logoBadge.textContent = '已設定';
+    dom.logoBadge.className = 'badge badge-done';
+    dom.logoRemoveBtn.classList.remove('hidden');
+    dom.logoStatus.textContent = '已儲存於瀏覽器，下次開啟自動載入';
   } else {
-    thumb.innerHTML = '<div class="placeholder">LOGO</div>';
-    badge.textContent = '未設定';
-    badge.className = 'badge';
-    rmBtn.classList.add('hidden');
-    status.textContent = '上傳 PNG 透明背景圖檔，僅需設定一次';
+    var placeholder = document.createElement('div');
+    placeholder.className = 'placeholder';
+    placeholder.textContent = 'LOGO';
+    thumb.appendChild(placeholder);
+    dom.logoBadge.textContent = '未設定';
+    dom.logoBadge.className = 'badge';
+    dom.logoRemoveBtn.classList.add('hidden');
+    dom.logoStatus.textContent = '上傳 PNG 透明背景圖檔，僅需設定一次';
   }
 }
 
 /* ───── Upload ───── */
-function initUpload() {
-  const zone = document.getElementById('uploadZone');
-  const inp = document.getElementById('fileInput');
-  zone.addEventListener('click', () => inp.click());
-  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
-  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
-  zone.addEventListener('drop', e => {
-    e.preventDefault(); zone.classList.remove('dragover');
-    const f = e.dataTransfer.files[0];
-    if (f && f.type.startsWith('image/')) loadFile(f);
-  });
-  inp.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
-}
-
-function initPaste() {
-  document.addEventListener('paste', e => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    for (const it of items) {
-      if (it.type.startsWith('image/')) {
-        e.preventDefault();
-        const f = it.getAsFile();
-        if (f) loadFile(f);
-        return;
-      }
-    }
-  });
-}
-
 function loadFile(file) {
-  srcFile = file;
-  const r = new FileReader();
-  r.onload = e => {
-    const img = new Image();
-    img.onload = () => { srcImg = img; showOptions(); scheduleUpdate(); };
+  // Fix #3: 輸入驗證
+  if (file.size > MAX_FILE_SIZE) {
+    alert('檔案大小超過 20MB，請選擇較小的圖片');
+    return;
+  }
+  state.srcFile = file;
+  var r = new FileReader();
+  r.onerror = function() { alert('圖片讀取失敗，請重試'); };
+  r.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      if (img.naturalWidth > MAX_DIMENSION || img.naturalHeight > MAX_DIMENSION) {
+        alert('圖片尺寸超過 ' + MAX_DIMENSION + 'px，可能無法正常處理');
+      }
+      state.srcImg = img;
+      showOptions();
+      scheduleUpdate();
+    };
+    img.onerror = function() { alert('無法載入此圖片，請確認格式是否正確'); };
     img.src = e.target.result;
   };
   r.readAsDataURL(file);
@@ -381,58 +453,44 @@ function loadFile(file) {
 
 /* ───── Options UI ───── */
 function showOptions() {
-  const w = srcImg.naturalWidth, h = srcImg.naturalHeight;
+  var w = state.srcImg.naturalWidth, h = state.srcImg.naturalHeight;
 
-  document.getElementById('origDim').textContent = w + ' x ' + h + ' px';
-  document.getElementById('origSize').textContent = fmtSize(srcFile.size);
-  document.getElementById('origFmt').textContent = srcFile.type.split('/')[1].toUpperCase();
+  dom.origDim.textContent = w + ' x ' + h + ' px';
+  dom.origSize.textContent = fmtSize(state.srcFile.size);
+  dom.origFmt.textContent = state.srcFile.type.split('/')[1].toUpperCase();
 
-  const raw = srcFile.name ? srcFile.name.replace(/\.[^.]+$/, '') : 'image_' + Date.now();
-  document.getElementById('txtName').value = raw;
-
-  const notice = document.getElementById('resizeNotice');
+  var raw = state.srcFile.name ? state.srcFile.name.replace(/\.[^.]+$/, '') : 'image_' + Date.now();
+  dom.txtName.value = raw;
 
   if (w >= TARGET_W) {
-    notice.textContent = '原圖 ' + w + ' x ' + h + ' → 等比縮放填滿 ' + TARGET_W + ' x ' + TARGET_H;
-    const targetR = TARGET_W / TARGET_H;
-    const imgR = w / h;
+    dom.resizeNotice.textContent = '原圖 ' + w + ' x ' + h + ' → 等比縮放填滿 ' + TARGET_W + ' x ' + TARGET_H;
+    var targetR = TARGET_W / TARGET_H;
+    var imgR = w / h;
     if (Math.abs(imgR - targetR) < 0.02) {
-      needsCrop = false;
+      state.needsCrop = false;
     } else {
-      needsCrop = true;
-      cropOff = 0.5;
-      cropDir = imgR > targetR ? 'x' : 'y';
-      document.getElementById('cropHint').textContent =
-        cropDir === 'x' ? '← 拖曳預覽圖片調整水平位置 →' : '↑ 拖曳預覽圖片調整垂直位置 ↓';
+      state.needsCrop = true;
+      state.cropOff = 0.5;
+      state.cropDir = imgR > targetR ? 'x' : 'y';
+      dom.cropHint.textContent =
+        state.cropDir === 'x' ? '← 拖曳預覽圖片調整水平位置 →' : '↑ 拖曳預覽圖片調整垂直位置 ↓';
     }
   } else {
-    notice.textContent = '原圖寬度 ' + w + 'px < ' + TARGET_W + 'px，僅壓縮不縮放';
-    needsCrop = false;
+    dom.resizeNotice.textContent = '原圖寬度 ' + w + 'px < ' + TARGET_W + 'px，僅壓縮不縮放';
+    state.needsCrop = false;
   }
 
-  document.getElementById('optionsCard').classList.remove('hidden');
+  dom.optionsCard.classList.remove('hidden');
 }
 
 /* ───── Canvas Drag (crop) ───── */
-let isDragging = false;
-let dragStart = 0;
-let dragStartOff = 0;
-let needsCrop = false;
-let cropDir = null;
-
-function setupCanvasDrag() {
-  const wrap = document.getElementById('previewWrap');
-  wrap.onmousedown = canvasDragStart;
-  wrap.ontouchstart = canvasDragStart;
-}
-
 function canvasDragStart(e) {
-  if (!needsCrop) return;
+  if (!state.needsCrop) return;
   e.preventDefault();
-  isDragging = true;
-  const p = ptrPos(e);
-  dragStart = cropDir === 'y' ? p.y : p.x;
-  dragStartOff = cropOff;
+  state.isDragging = true;
+  var p = ptrPos(e);
+  state.dragStart = state.cropDir === 'y' ? p.y : p.x;
+  state.dragStartOff = state.cropOff;
   document.addEventListener('mousemove', canvasDragMove);
   document.addEventListener('mouseup', canvasDragEnd);
   document.addEventListener('touchmove', canvasDragMove, {passive:false});
@@ -440,21 +498,22 @@ function canvasDragStart(e) {
 }
 
 function canvasDragMove(e) {
-  if (!isDragging) return;
+  if (!state.isDragging) return;
   e.preventDefault();
-  const p = ptrPos(e);
-  const cur = cropDir === 'y' ? p.y : p.x;
-  const cvs = document.getElementById('cvs');
-  const visibleSize = cropDir === 'y' ? cvs.getBoundingClientRect().height : cvs.getBoundingClientRect().width;
-  const delta = dragStart - cur;
-  cropOff = Math.max(0, Math.min(1, dragStartOff + delta / visibleSize));
-  drawCanvas();
-  dragStart = cur;
-  dragStartOff = cropOff;
+  var p = ptrPos(e);
+  var cur = state.cropDir === 'y' ? p.y : p.x;
+  var rect = dom.cvs.getBoundingClientRect();
+  var visibleSize = state.cropDir === 'y' ? rect.height : rect.width;
+  var delta = state.dragStart - cur;
+  state.cropOff = Math.max(0, Math.min(1, state.dragStartOff + delta / visibleSize));
+  // Fix #4: 拖曳中跳過銳化（傳 true）
+  drawCanvas(true);
+  state.dragStart = cur;
+  state.dragStartOff = state.cropOff;
 }
 
 function canvasDragEnd() {
-  isDragging = false;
+  state.isDragging = false;
   document.removeEventListener('mousemove', canvasDragMove);
   document.removeEventListener('mouseup', canvasDragEnd);
   document.removeEventListener('touchmove', canvasDragMove);
@@ -469,119 +528,125 @@ function ptrPos(e) {
 
 /* ───── Events ───── */
 function onOptChange() {
-  if (document.getElementById('chkLogo').checked && !logoImg) {
+  if (dom.chkLogo.checked && !state.logoImg) {
     alert('請先在上方「LOGO 設定」上傳 LOGO 圖檔');
-    document.getElementById('chkLogo').checked = false;
+    dom.chkLogo.checked = false;
     return;
   }
-  const fmt = document.getElementById('selFmt').value;
-  document.getElementById('pngWarn').classList.toggle('hidden', fmt !== 'image/png');
+  var fmt = dom.selFmt.value;
+  dom.pngWarn.classList.toggle('hidden', fmt !== 'image/png');
   scheduleUpdate();
 }
 
 function scheduleUpdate() {
-  clearTimeout(debounce);
-  debounce = setTimeout(render, 80);
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(render, 80);
 }
 
 /* ───── Drawing (fast, for drag) ───── */
-function drawCanvas() {
-  if (!srcImg) return;
-  const cvs = document.getElementById('cvs');
-  const ctx = cvs.getContext('2d');
-  const w = srcImg.naturalWidth, h = srcImg.naturalHeight;
+function drawCanvas(skipSharpen) {
+  if (!state.srcImg) return;
+  var w = state.srcImg.naturalWidth, h = state.srcImg.naturalHeight;
 
   if (w >= TARGET_W) {
-    cvs.width = TARGET_W;
-    cvs.height = TARGET_H;
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    const tR = TARGET_W / TARGET_H;
-    const iR = w / h;
-    let sx, sy, sw, sh;
+    dom.cvs.width = TARGET_W;
+    dom.cvs.height = TARGET_H;
+    dom.ctx.imageSmoothingEnabled = true;
+    dom.ctx.imageSmoothingQuality = 'high';
+    var tR = TARGET_W / TARGET_H;
+    var iR = w / h;
+    var sx, sy, sw, sh;
     if (iR > tR) {
-      sh = h; sw = h * tR; sy = 0; sx = (w - sw) * cropOff;
+      sh = h; sw = h * tR; sy = 0; sx = (w - sw) * state.cropOff;
     } else {
-      sw = w; sh = w / tR; sx = 0; sy = (h - sh) * cropOff;
+      sw = w; sh = w / tR; sx = 0; sy = (h - sh) * state.cropOff;
     }
-    ctx.drawImage(srcImg, sx, sy, sw, sh, 0, 0, TARGET_W, TARGET_H);
+    dom.ctx.drawImage(state.srcImg, sx, sy, sw, sh, 0, 0, TARGET_W, TARGET_H);
   } else {
-    cvs.width = w; cvs.height = h;
-    ctx.drawImage(srcImg, 0, 0);
+    dom.cvs.width = w; dom.cvs.height = h;
+    dom.ctx.drawImage(state.srcImg, 0, 0);
   }
 
-  if (document.getElementById('chkSharpen').checked && w >= TARGET_W) {
-    applySharpen(ctx, cvs.width, cvs.height, 0.4);
+  // Fix #4: 拖曳中不跑銳化
+  if (!skipSharpen && dom.chkSharpen.checked && w >= TARGET_W) {
+    applySharpen(dom.ctx, dom.cvs.width, dom.cvs.height, SHARPEN_STRENGTH);
   }
 
-  if (document.getElementById('chkLogo').checked && logoImg) {
-    const lw = logoImg.naturalWidth, lh = logoImg.naturalHeight;
-    const sc = Math.min(cvs.width / lw, cvs.height / lh);
-    const dw = lw * sc, dh = lh * sc;
-    ctx.drawImage(logoImg, (cvs.width - dw) / 2, (cvs.height - dh) / 2, dw, dh);
+  if (dom.chkLogo.checked && state.logoImg) {
+    var lw = state.logoImg.naturalWidth, lh = state.logoImg.naturalHeight;
+    var sc = Math.min(dom.cvs.width / lw, dom.cvs.height / lh);
+    var dw = lw * sc, dh = lh * sc;
+    dom.ctx.drawImage(state.logoImg, (dom.cvs.width - dw) / 2, (dom.cvs.height - dh) / 2, dw, dh);
   }
 }
 
 /* ───── Full render (draw + compress) ───── */
 async function render() {
-  if (!srcImg || busy) return;
-  busy = true;
+  if (!state.srcImg) return;
+  // Fix #5: busy 時不丟棄，標記 pending，完成後重跑
+  if (state.busy) { state.pendingRender = true; return; }
+  state.busy = true;
 
-  const previewCard = document.getElementById('previewCard');
-  const wrap = document.getElementById('previewWrap');
-  previewCard.classList.remove('hidden');
-  wrap.classList.toggle('can-drag', needsCrop);
-  document.getElementById('cropHint').classList.toggle('hidden', !needsCrop);
+  dom.previewCard.classList.remove('hidden');
+  dom.previewWrap.classList.toggle('can-drag', state.needsCrop);
+  dom.cropHint.classList.toggle('hidden', !state.needsCrop);
 
-  drawCanvas();
-  setupCanvasDrag();
+  drawCanvas(false);
 
   try {
-    const cvs = document.getElementById('cvs');
-    const fmt = getFormat();
-    outBlob = await compress(cvs, fmt);
+    var fmt = getFormat();
+    var blob = await compress(dom.cvs, fmt);
+    if (!blob) {
+      alert('圖片壓縮失敗，請嘗試其他輸出格式');
+      return;
+    }
+    state.outBlob = blob;
 
-    document.getElementById('pvDim').textContent = cvs.width + ' x ' + cvs.height + ' px';
-    document.getElementById('pvSize').textContent = fmtSize(outBlob.size);
+    dom.pvDim.textContent = dom.cvs.width + ' x ' + dom.cvs.height + ' px';
+    dom.pvSize.textContent = fmtSize(blob.size);
 
-    const pct = ((1 - outBlob.size / srcFile.size) * 100);
-    const savedEl = document.getElementById('pvSaved');
+    var pct = ((1 - blob.size / state.srcFile.size) * 100);
     if (pct > 0) {
-      savedEl.textContent = '節省 ' + pct.toFixed(0) + '%';
-      savedEl.className = 'saved';
+      dom.pvSaved.textContent = '節省 ' + pct.toFixed(0) + '%';
+      dom.pvSaved.className = 'saved';
     } else {
-      savedEl.textContent = '大小增加 ' + Math.abs(pct).toFixed(0) + '%';
-      savedEl.className = 'warn';
+      dom.pvSaved.textContent = '大小增加 ' + Math.abs(pct).toFixed(0) + '%';
+      dom.pvSaved.className = 'warn';
     }
   } finally {
-    busy = false;
+    state.busy = false;
+    // Fix #5: 有 pending 請求就重跑
+    if (state.pendingRender) {
+      state.pendingRender = false;
+      scheduleUpdate();
+    }
   }
 }
 
 /* ───── Sharpen ───── */
 function applySharpen(ctx, w, h, strength) {
-  const src = ctx.getImageData(0, 0, w, h);
-  const dst = ctx.createImageData(w, h);
-  const s = src.data, d = dst.data;
+  var src = ctx.getImageData(0, 0, w, h);
+  var dst = ctx.createImageData(w, h);
+  var s = src.data, d = dst.data;
 
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = (y * w + x) * 4;
+  for (var y = 0; y < h; y++) {
+    for (var x = 0; x < w; x++) {
+      var i = (y * w + x) * 4;
 
       if (y === 0 || y === h - 1 || x === 0 || x === w - 1) {
         d[i] = s[i]; d[i+1] = s[i+1]; d[i+2] = s[i+2]; d[i+3] = s[i+3];
         continue;
       }
 
-      for (let c = 0; c < 3; c++) {
-        const center = s[i + c];
-        const neighbors =
+      for (var c = 0; c < 3; c++) {
+        var center = s[i + c];
+        var neighbors =
           s[((y-1)*w+x)*4+c] +
           s[((y+1)*w+x)*4+c] +
           s[(y*w+x-1)*4+c] +
           s[(y*w+x+1)*4+c];
-        const diff = center - neighbors / 4;
-        const val = center + strength * diff;
+        var diff = center - neighbors / 4;
+        var val = center + strength * diff;
         d[i + c] = val < 0 ? 0 : val > 255 ? 255 : (val + 0.5) | 0;
       }
       d[i+3] = s[i+3];
@@ -593,8 +658,8 @@ function applySharpen(ctx, w, h, strength) {
 
 /* ───── Compression ───── */
 function getFormat() {
-  const sel = document.getElementById('selFmt').value;
-  return sel === 'original' ? (srcFile.type || 'image/jpeg') : sel;
+  var sel = dom.selFmt.value;
+  return sel === 'original' ? (state.srcFile.type || 'image/jpeg') : sel;
 }
 
 function getExt(fmt) {
@@ -604,13 +669,15 @@ function getExt(fmt) {
 async function compress(cvs, fmt) {
   if (fmt === 'image/png') return toBlobP(cvs, 'image/png');
 
-  let blob = await toBlobP(cvs, fmt, 0.92);
+  var blob = await toBlobP(cvs, fmt, 0.92);
+  if (!blob) return null;
   if (blob.size <= MAX_BYTES) return blob;
 
-  let lo = 0.2, hi = 0.92, best = blob;
-  for (let i = 0; i < 9; i++) {
-    const mid = (lo + hi) / 2;
+  var lo = 0.2, hi = 0.92, best = blob;
+  for (var i = 0; i < 9; i++) {
+    var mid = (lo + hi) / 2;
     blob = await toBlobP(cvs, fmt, mid);
+    if (!blob) return best;
     if (blob.size > MAX_BYTES) {
       hi = mid;
     } else {
@@ -622,16 +689,16 @@ async function compress(cvs, fmt) {
 }
 
 function toBlobP(cvs, type, q) {
-  return new Promise(res => cvs.toBlob(res, type, q));
+  return new Promise(function(res) { cvs.toBlob(function(b) { res(b); }, type, q); });
 }
 
 /* ───── Download ───── */
 function download() {
-  if (!outBlob) return;
-  const name = document.getElementById('txtName').value.trim() || 'image';
-  const ext = getExt(getFormat());
-  const url = URL.createObjectURL(outBlob);
-  const a = document.createElement('a');
+  if (!state.outBlob) return;
+  var name = dom.txtName.value.trim() || 'image';
+  var ext = getExt(getFormat());
+  var url = URL.createObjectURL(state.outBlob);
+  var a = document.createElement('a');
   a.href = url; a.download = name + ext;
   document.body.appendChild(a); a.click();
   document.body.removeChild(a);
@@ -640,17 +707,20 @@ function download() {
 
 /* ───── Reset ───── */
 function reset() {
-  srcImg = null; srcFile = null; outBlob = null; cropOff = 0.5;
-  document.getElementById('optionsCard').classList.add('hidden');
-  document.getElementById('previewCard').classList.add('hidden');
-  needsCrop = false;
-  document.getElementById('fileInput').value = '';
-  document.getElementById('cropHint').classList.add('hidden');
-  document.getElementById('previewWrap').classList.remove('can-drag');
-  document.getElementById('chkSharpen').checked = true;
-  document.getElementById('chkLogo').checked = false;
-  document.getElementById('selFmt').value = 'original';
-  document.getElementById('pngWarn').classList.add('hidden');
+  state.srcImg = null;
+  state.srcFile = null;
+  state.outBlob = null;
+  state.cropOff = 0.5;
+  state.needsCrop = false;
+  dom.optionsCard.classList.add('hidden');
+  dom.previewCard.classList.add('hidden');
+  dom.cropHint.classList.add('hidden');
+  dom.previewWrap.classList.remove('can-drag');
+  dom.fileInput.value = '';
+  dom.chkSharpen.checked = true;
+  dom.chkLogo.checked = false;
+  dom.selFmt.value = 'original';
+  dom.pngWarn.classList.add('hidden');
 }
 
 /* ───── Util ───── */
@@ -659,6 +729,8 @@ function fmtSize(b) {
   if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
   return (b / 1048576).toFixed(2) + ' MB';
 }
+
+})();
 </script>
 </body>
 </html>
